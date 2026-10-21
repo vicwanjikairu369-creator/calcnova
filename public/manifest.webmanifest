@@ -1,0 +1,10 @@
+{
+  "name": "CalcNova",
+  "short_name": "CalcNova",
+  "description": "One platform. Every calculation.",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#0f172a",
+  "theme_color": "#0f172a",
+  "icons": [{ "src": "/favicon.svg", "sizes": "any", "type": "image/svg+xml" }]
+}

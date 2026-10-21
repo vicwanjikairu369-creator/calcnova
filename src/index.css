@@ -1,0 +1,39 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  html { -webkit-text-size-adjust: 100%; }
+  body { @apply bg-navy-50 text-navy-900 dark:bg-navy-950 dark:text-navy-100 font-sans; }
+  * { @apply border-navy-200 dark:border-navy-800; }
+  :focus-visible { @apply outline-none ring-2 ring-violet-500 ring-offset-2 ring-offset-white dark:ring-offset-navy-950 rounded-md; }
+}
+
+@layer components {
+  .btn {
+    @apply inline-flex items-center justify-center gap-2 rounded-lg px-3.5 py-2 text-sm font-medium
+           transition-colors duration-150 disabled:opacity-50 disabled:pointer-events-none;
+  }
+  .btn-primary { @apply btn bg-violet-600 text-white hover:bg-violet-700 active:bg-violet-800; }
+  .btn-ghost { @apply btn text-navy-700 hover:bg-navy-100 dark:text-navy-200 dark:hover:bg-navy-800; }
+  .btn-soft { @apply btn bg-navy-100 text-navy-800 hover:bg-navy-200 dark:bg-navy-800 dark:text-navy-100 dark:hover:bg-navy-700; }
+  .input {
+    @apply w-full rounded-lg border border-navy-200 bg-white px-3 py-2 text-sm
+           placeholder:text-navy-400 focus:border-violet-500 focus:ring-2 focus:ring-violet-500/30
+           dark:border-navy-700 dark:bg-navy-900 dark:text-navy-100 dark:placeholder:text-navy-500;
+  }
+  .card { @apply rounded-xl border border-navy-200 bg-white shadow-soft dark:border-navy-800 dark:bg-navy-900; }
+  .label { @apply block text-xs font-medium uppercase tracking-wide text-navy-500 dark:text-navy-400; }
+  .key {
+    @apply flex items-center justify-center rounded-lg text-base font-medium select-none
+           bg-white text-navy-800 border border-navy-200 hover:bg-navy-50 active:bg-navy-100
+           dark:bg-navy-900 dark:text-navy-100 dark:border-navy-700 dark:hover:bg-navy-800
+           dark:active:bg-navy-700 transition-colors duration-100 h-12;
+  }
+  .key-op { @apply key bg-navy-100 dark:bg-navy-800 text-violet-700 dark:text-violet-300 font-semibold; }
+  .key-eq { @apply key bg-violet-600 text-white border-violet-600 hover:bg-violet-700 dark:bg-violet-600 dark:text-white dark:hover:bg-violet-700; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after { animation-duration: 0.001ms !important; transition-duration: 0.001ms !important; }
+}
