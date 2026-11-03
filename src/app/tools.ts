@@ -1,6 +1,5 @@
 import {
   Calculator,
-  FlaskConical,
   LineChart,
   Sigma,
   FunctionSquare,
@@ -25,21 +24,13 @@ export interface ToolMeta {
 }
 
 export const TOOLS: Record<string, ToolMeta> = {
-  basic: {
-    id: 'basic',
-    name: 'Basic',
-    description: 'Everyday arithmetic with memory and keyboard input.',
+  calculator: {
+    id: 'calculator',
+    name: 'Calculator',
+    description: 'Unified basic & scientific math with keyboard support.',
     icon: Calculator,
     category: 'Math',
-    keywords: ['arithmetic', 'add', 'multiply', 'subtract', 'divide'],
-  },
-  scientific: {
-    id: 'scientific',
-    name: 'Scientific',
-    description: 'Trigonometry, logarithms, powers and constants.',
-    icon: FlaskConical,
-    category: 'Math',
-    keywords: ['trig', 'log', 'sin', 'cos', 'tan', 'ln', 'factorial'],
+    keywords: ['basic', 'arithmetic', 'scientific', 'trig', 'log', 'sin', 'cos', 'add', 'multiply'],
   },
   graphing: {
     id: 'graphing',
@@ -135,7 +126,7 @@ export const CATEGORIES_NAV: { id: string; name: string; toolIds: string[] }[] =
   {
     id: 'math',
     name: 'Mathematics',
-    toolIds: ['basic', 'scientific', 'graphing', 'equations', 'calculus'],
+    toolIds: ['calculator', 'graphing', 'equations', 'calculus'],
   },
   {
     id: 'tools',

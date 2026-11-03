@@ -1,23 +1,16 @@
-import { useMemo, useState } from 'react';
 import { Search } from 'lucide-react';
-import { TOOLS, searchTools } from '@/app/tools';
+import { TOOLS } from '@/app/tools';
 import { useHistory } from '@/hooks/useHistory';
-import { formatNumber } from '@/lib/math/format';
 
 export function Home({ onOpen }: { onOpen: (id: string) => void }) {
-  const [q, setQ] = useState('');
   const { recent, history } = useHistory();
 
-  const results = useMemo(() => (q.trim() ? searchTools(q) : []), [q]);
-
-  const categories = useMemo(() => {
-    const map = new Map<string, string[]>();
-    for (const t of Object.values(TOOLS)) {
-      if (!map.has(t.category)) map.set(t.category, []);
-      map.get(t.category)!.push(t.id);
-    }
-    return Array.from(map.entries());
-  }, []);
+  // Group tools by category for the display grid
+  const categories = Object.values(TOOLS).reduce((acc, tool) => {
+    if (!acc[tool.category]) acc[tool.category] = [];
+    acc[tool.category].push(tool.id);
+    return acc;
+  }, {} as Record<string, string[]>);
 
   return (
     <div className="mx-auto max-w-5xl space-y-8">
@@ -27,34 +20,26 @@ export function Home({ onOpen }: { onOpen: (id: string) => void }) {
           A precise, private calculator workspace: basic and scientific maths, graphing, equations,
           finance, converters, statistics and programmer tools.
         </p>
-        <div className="relative max-w-xl">
-          <Search className="pointer-events-none absolute left-3 top-1/2 h-5 w-5 -translate-y-1/2 text-navy-400" aria-hidden />
-          <input
-            className="input pl-10 py-3 text-base"
-            placeholder="Search calculators… try 'loan', 'matrix' or 'trig'"
-            value={q}
-            onChange={(e) => setQ(e.target.value)}
-            aria-label="Search calculators"
-          />
+        
+        {/* The new Global Search trigger */}
+        <div className="max-w-xl">
+          <button
+            onClick={() => {
+              // Trigger the Cmd+K search modal
+              const event = new KeyboardEvent('keydown', {
+                key: 'k',
+                metaKey: true,
+                bubbles: true,
+              });
+              document.dispatchEvent(event);
+            }}
+            className="flex w-full items-center gap-3 rounded-xl border border-navy-200 bg-white px-4 py-4 text-left text-navy-500 shadow-sm transition-shadow hover:shadow-md dark:border-navy-700 dark:bg-navy-900 dark:text-navy-400"
+          >
+            <Search className="h-5 w-5 text-navy-400" />
+            <span className="flex-1 text-base">Search tools or type a math problem...</span>
+            <kbd className="hidden sm:inline-block rounded border border-navy-200 px-2 py-0.5 text-xs text-navy-400 dark:border-navy-700">⌘K</kbd>
+          </button>
         </div>
-        {results.length > 0 && (
-          <ul className="card divide-y divide-navy-100 dark:divide-navy-800 max-w-xl">
-            {results.map((t) => {
-              const Icon = t.icon;
-              return (
-                <li key={t.id}>
-                  <button onClick={() => onOpen(t.id)} className="flex w-full items-center gap-3 px-4 py-3 text-left hover:bg-navy-50 dark:hover:bg-navy-800">
-                    <Icon className="h-5 w-5 text-violet-600" aria-hidden />
-                    <div>
-                      <div className="text-sm font-medium">{t.name}</div>
-                      <div className="text-xs text-navy-500 dark:text-navy-400">{t.description}</div>
-                    </div>
-                  </button>
-                </li>
-              );
-            })}
-          </ul>
-        )}
       </section>
 
       {recent.length > 0 && (
@@ -87,7 +72,7 @@ export function Home({ onOpen }: { onOpen: (id: string) => void }) {
         </section>
       )}
 
-      {categories.map(([cat, ids]) => (
+      {Object.entries(categories).map(([cat, ids]) => (
         <section key={cat} className="space-y-3">
           <h2 className="text-sm font-semibold uppercase tracking-wider text-navy-400">{cat}</h2>
           <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
@@ -109,7 +94,7 @@ export function Home({ onOpen }: { onOpen: (id: string) => void }) {
       ))}
 
       <p className="text-xs text-navy-400">
-        Suggested starting values: try <code>15% of 2400</code> in Utilities,{' '}
+        Suggested starting values: try <code>15% of 2400</code> in the Calculator,{' '}
         <code>2x + 5 = 17</code> in the linear solver, or <code>1 km → m</code> in the converter.
         Result formatting uses up to 12 significant digits by default — see Settings to change.
       </p>

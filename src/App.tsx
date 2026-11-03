@@ -2,8 +2,8 @@ import { Suspense, useCallback, useState } from 'react';
 import { Layout } from '@/components/Layout';
 import { SettingsProvider } from '@/hooks/useSettings';
 import { HistoryProvider, useHistory } from '@/hooks/useHistory';
-import { BasicCalculator } from '@/features/basic/BasicCalculator';
-import { ScientificCalculator } from '@/features/scientific/ScientificCalculator';
+import { WorkspaceProvider } from '@/hooks/useWorkspace'; // NEW
+import { Calculator } from '@/features/calculator/Calculator'; // NEW unified calc
 import { Graphing } from '@/features/graphing/Graphing';
 import { EquationSolver } from '@/features/equations/EquationSolver';
 import { Calculus } from '@/features/calculus/Calculus';
@@ -33,21 +33,14 @@ function Shell() {
 
   const navigate = (id: string) => open(id);
 
-  const onSearch = (q: string) => {
-    const s = q.trim().toLowerCase();
-    if (!s) return;
-    const first = Object.values(TOOLS).find((t) =>
-      [t.name, ...(t.keywords ?? [])].join(' ').toLowerCase().includes(s),
-    );
-    if (first) navigate(first.id);
-  };
-
   return (
-    <Layout currentTool={tool} onNavigate={navigate} onSearch={onSearch}>
+    <Layout currentTool={tool} onNavigate={navigate}>
       <Suspense fallback={<div className="text-sm text-navy-400">Loading…</div>}>
         {tool === 'home' && <Home onOpen={open} />}
-        {tool === 'basic' && <BasicCalculator />}
-        {tool === 'scientific' && <ScientificCalculator />}
+        
+        {/* Unified Calculator replaces Basic and Scientific */}
+        {tool === 'calculator' && <Calculator />}
+        
         {tool === 'graphing' && <Graphing />}
         {tool === 'equations' && <EquationSolver />}
         {tool === 'calculus' && <Calculus />}
@@ -59,6 +52,7 @@ function Shell() {
         {tool === 'history' && <HistoryPage />}
         {tool === 'assistant' && <Assistant />}
         {tool === 'settings' && <SettingsPage />}
+        
         {!TOOLS[tool] && tool !== 'home' && (
           <div className="text-center py-16">
             <h2 className="text-xl font-semibold">Not found</h2>
@@ -79,7 +73,9 @@ export default function App() {
   return (
     <SettingsProvider>
       <HistoryProvider>
-        <Shell />
+        <WorkspaceProvider> {/* NEW: Wraps the app for cross-tool memory */}
+          <Shell />
+        </WorkspaceProvider>
       </HistoryProvider>
     </SettingsProvider>
   );

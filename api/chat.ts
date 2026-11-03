@@ -19,6 +19,7 @@ Rules:
 Keep answers under 200 words.`;
 
 export default async function handler(req: Request): Promise<Response> {
+  // 1. Only allow POST requests
   if (req.method !== 'POST') {
     return new Response(JSON.stringify({ error: 'Method not allowed' }), {
       status: 405,
@@ -26,6 +27,7 @@ export default async function handler(req: Request): Promise<Response> {
     });
   }
 
+  // 2. Check for the API key
   const apiKey = process.env.OPENAI_API_KEY;
   if (!apiKey) {
     return new Response(
@@ -37,6 +39,7 @@ export default async function handler(req: Request): Promise<Response> {
     );
   }
 
+  // 3. Parse and validate the request body
   let body: Body;
   try {
     body = (await req.json()) as Body;
@@ -61,6 +64,7 @@ export default async function handler(req: Request): Promise<Response> {
     });
   }
 
+  // 4. Call OpenAI
   try {
     const upstream = await fetch('https://api.openai.com/v1/chat/completions', {
       method: 'POST',

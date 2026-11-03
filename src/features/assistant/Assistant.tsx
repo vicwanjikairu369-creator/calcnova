@@ -15,6 +15,7 @@ function uid() {
   return Math.random().toString(36).slice(2, 9);
 }
 
+// If you configured the endpoint in .env, it reads it here.
 const ENDPOINT = import.meta.env.VITE_ASSISTANT_ENDPOINT as string | undefined;
 
 export function Assistant() {
@@ -24,21 +25,24 @@ export function Assistant() {
       id: uid(),
       role: 'assistant',
       text:
-        'Hi. I am the CalcNova math assistant. Ask me a maths question — I will compute it locally and show my working where I can.',
+        'Hi. I am the CalcNova math assistant. I can help with arithmetic, equations, calculus, finance, stats and unit conversions. What would you like to calculate?',
     },
   ]);
   const [input, setInput] = useState('');
   const [busy, setBusy] = useState(false);
   const [remoteAvailable, setRemoteAvailable] = useState<boolean>(!!ENDPOINT);
   const bottomRef = useRef<HTMLDivElement>(null);
+  const [lastValue, setLastValue] = useState<number | undefined>(undefined);
 
+  // Auto-scroll to bottom on new messages
   useEffect(() => {
     bottomRef.current?.scrollIntoView({ behavior: 'smooth' });
-  }, [messages.length]);
+  }, [messages.length, busy]);
 
   const send = async () => {
     const question = input.trim();
     if (!question || busy) return;
+    
     setInput('');
     setBusy(true);
 
@@ -50,12 +54,15 @@ export function Assistant() {
 
     if (remoteAvailable && ENDPOINT) {
       try {
+        // Pass the previous value as context to the AI
         const res = await fetch(ENDPOINT, {
           method: 'POST',
           headers: { 'content-type': 'application/json' },
-          body: JSON.stringify({ question }),
+          body: JSON.stringify({ question, previousValue: lastValue }),
         });
+        
         if (!res.ok) throw new Error(`HTTP ${res.status}`);
+        
         const data = (await res.json()) as { text?: string; details?: string[] };
         reply = {
           kind: 'answer',
@@ -72,7 +79,13 @@ export function Assistant() {
         };
       }
     } else {
-      reply = answerOffline(question);
+      // Use the upgraded local engine
+      reply = answerOffline(question, lastValue);
+    }
+
+    // Save the new context for the next follow-up
+    if (reply.kind === 'answer' && reply.lastValue !== undefined) {
+      setLastValue(reply.lastValue);
     }
 
     setMessages((m) => [
@@ -101,6 +114,7 @@ export function Assistant() {
         text: 'Cleared. Ask me another maths question.',
       },
     ]);
+    setLastValue(undefined);
   };
 
   return (
@@ -111,10 +125,7 @@ export function Assistant() {
           <h1 className="text-2xl font-semibold">Math assistant</h1>
           <p className="text-sm text-navy-500 dark:text-navy-400">
             {remoteAvailable ? (
-              <>
-                Online mode — questions are sent to the serverless endpoint. No secrets are stored
-                in your browser.
-              </>
+              <>Online mode — powered by secure serverless endpoint.</>
             ) : (
               <>Offline mode — everything runs on your device. Nothing is uploaded.</>
             )}
@@ -131,7 +142,7 @@ export function Assistant() {
       </header>
 
       <div
-        className="card flex-1 overflow-y-auto p-4 space-y-3"
+        className="card flex-1 overflow-y-auto p-4 space-y-4"
         role="log"
         aria-live="polite"
         aria-label="Assistant conversation"
@@ -182,7 +193,7 @@ export function Assistant() {
       >
         <input
           className="input"
-          placeholder="e.g. solve 2x + 5 = 17"
+          placeholder="e.g. solve 2x + 5 = 17, or mean of 2,4,5"
           value={input}
           onChange={(e) => setInput(e.target.value)}
           aria-label="Ask a maths question"
@@ -195,25 +206,13 @@ export function Assistant() {
       <details className="text-xs text-navy-500 dark:text-navy-400">
         <summary className="cursor-pointer">What can I ask?</summary>
         <ul className="mt-1 list-disc space-y-0.5 pl-5">
-          <li>
-            Arithmetic: <code>2 + 3 * 4</code>, <code>sqrt(81)</code>, <code>sin(30) + cos(60)</code>
-          </li>
-          <li>
-            Equations: <code>solve 2x + 5 = 17</code>, <code>solve x^2 - 5x + 6 = 0</code>
-          </li>
-          <li>
-            Calculus: <code>derivative of x^2 * sin(x)</code>,{' '}
-            <code>integrate sin(x) from 0 to pi</code>
-          </li>
-          <li>
-            Units: <code>convert 5 km to miles</code>, <code>100 c to f</code>
-          </li>
-          <li>
-            Percentages: <code>15% of 2400</code>
-          </li>
-          <li>
-            Statistics: <code>mean of 2, 4, 4, 4, 5, 5, 7, 9</code>
-          </li>
+          <li>Arithmetic: <code>2 + 3 * 4</code>, <code>sqrt(81)</code></li>
+          <li>Equations: <code>solve 2x + 5 = 17</code></li>
+          <li>Calculus: <code>derivative of x^2 * sin(x)</code></li>
+          <li>Finance: <code>loan 200000 at 5% for 30 years</code></li>
+          <li>Units: <code>convert 5 km to miles</code></li>
+          <li>Stats: <code>mean of 2, 4, 4, 5</code></li>
+          <li>Follow-ups: <code>divided by 3</code> (after a previous answer)</li>
         </ul>
       </details>
     </div>

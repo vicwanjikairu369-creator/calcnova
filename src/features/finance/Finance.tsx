@@ -1,6 +1,8 @@
 import { useState } from 'react';
 import { formatNumber } from '@/lib/math/format';
 import { useHistory } from '@/hooks/useHistory';
+import { useWorkspace } from '@/hooks/useWorkspace';
+import { Save } from 'lucide-react';
 
 type Mode = 'simple' | 'compound' | 'loan' | 'margin' | 'vat';
 
@@ -45,6 +47,20 @@ function Money({ v }: { v: number }) {
   return <span className="font-mono">{formatNumber(v, { precision: 10, thousands: true })}</span>;
 }
 
+// Reusable button for saving to the global workspace
+function SaveButton({ label, value }: { label: string; value: number }) {
+  const { setVariable } = useWorkspace();
+  return (
+    <button
+      onClick={() => setVariable(label, value)}
+      className="btn-ghost px-2 py-1 text-xs text-violet-600 hover:text-violet-700 dark:text-violet-400 dark:hover:text-violet-300 ml-auto flex items-center gap-1"
+      title={`Save as "${label}" in Workspace`}
+    >
+      <Save className="h-3 w-3" /> Save to Workspace
+    </button>
+  );
+}
+
 function SimpleInterest() {
   const [p, setP] = useState(1000);
   const [r, setR] = useState(5);
@@ -59,9 +75,15 @@ function SimpleInterest() {
         <label className="space-y-1"><span className="label">Rate (% per year)</span><input type="number" className="input" value={r} onChange={(e) => setR(Number(e.target.value))} /></label>
         <label className="space-y-1"><span className="label">Time (years)</span><input type="number" className="input" value={t} onChange={(e) => setT(Number(e.target.value))} /></label>
       </div>
-      <div className="rounded-lg bg-navy-50 p-3 text-sm dark:bg-navy-950/60">
-        <div>Interest = P·r·t/100 = {p}·{r}·{t}/100 = <strong><Money v={interest} /></strong></div>
-        <div className="mt-1">Total = P + Interest = <strong><Money v={total} /></strong></div>
+      <div className="rounded-lg bg-navy-50 p-3 text-sm dark:bg-navy-950/60 space-y-2">
+        <div className="flex flex-wrap items-center justify-between">
+          <div>Interest = P·r·t/100 = {p}·{r}·{t}/100 = <strong><Money v={interest} /></strong></div>
+          <SaveButton label="simpleInterest" value={interest} />
+        </div>
+        <div className="flex flex-wrap items-center justify-between border-t border-navy-200 dark:border-navy-800 pt-2">
+          <div>Total = P + Interest = <strong><Money v={total} /></strong></div>
+          <SaveButton label="simpleTotal" value={total} />
+        </div>
       </div>
       <button className="btn-soft text-xs" onClick={() => addHistory(`Simple interest P=${p} r=${r}% t=${t}y`, `Interest ${interest.toFixed(2)}, Total ${total.toFixed(2)}`, 'Finance')}>
         Save to history
@@ -86,10 +108,16 @@ function CompoundInterest() {
         <label className="space-y-1"><span className="label">Years</span><input type="number" className="input" value={t} onChange={(e) => setT(Number(e.target.value))} /></label>
         <label className="space-y-1"><span className="label">Compounds/yr</span><input type="number" className="input" value={n} onChange={(e) => setN(Number(e.target.value))} /></label>
       </div>
-      <div className="rounded-lg bg-navy-50 p-3 text-sm dark:bg-navy-950/60">
+      <div className="rounded-lg bg-navy-50 p-3 text-sm dark:bg-navy-950/60 space-y-2">
         <div>A = P(1 + r/n)<sup>nt</sup> = {p}(1 + {r}/100/{n})<sup>{n}·{t}</sup></div>
-        <div className="mt-1">Amount = <strong><Money v={amount} /></strong></div>
-        <div>Interest earned = <strong><Money v={interest} /></strong></div>
+        <div className="flex flex-wrap items-center justify-between border-t border-navy-200 dark:border-navy-800 pt-2">
+          <div>Amount = <strong><Money v={amount} /></strong></div>
+          <SaveButton label="compoundAmount" value={amount} />
+        </div>
+        <div className="flex flex-wrap items-center justify-between">
+          <div>Interest earned = <strong><Money v={interest} /></strong></div>
+          <SaveButton label="compoundInterest" value={interest} />
+        </div>
       </div>
       <button className="btn-soft text-xs" onClick={() => addHistory(`Compound P=${p} r=${r}% t=${t}y n=${n}`, `A=${amount.toFixed(2)}`, 'Finance')}>
         Save to history
@@ -107,6 +135,7 @@ function LoanPayment() {
   const payment = monthly === 0 ? p / n : (p * monthly) / (1 - Math.pow(1 + monthly, -n));
   const total = payment * n;
   const interest = total - p;
+  const { addHistory } = useHistory();
 
   // Amortisation preview
   const rows: { month: number; interest: number; principal: number; balance: number }[] = [];
@@ -117,7 +146,6 @@ function LoanPayment() {
     bal = bal - princ;
     rows.push({ month: i + 1, interest: int, principal: princ, balance: Math.max(bal, 0) });
   }
-  const { addHistory } = useHistory();
 
   return (
     <div className="card p-4 space-y-3">
@@ -126,10 +154,19 @@ function LoanPayment() {
         <label className="space-y-1"><span className="label">Annual rate %</span><input type="number" className="input" value={r} onChange={(e) => setR(Number(e.target.value))} /></label>
         <label className="space-y-1"><span className="label">Term (years)</span><input type="number" className="input" value={years} onChange={(e) => setYears(Number(e.target.value))} /></label>
       </div>
-      <div className="rounded-lg bg-navy-50 p-3 text-sm dark:bg-navy-950/60 space-y-1">
-        <div>Monthly payment = <strong><Money v={payment} /></strong></div>
-        <div>Total paid = <strong><Money v={total} /></strong></div>
-        <div>Total interest = <strong><Money v={interest} /></strong></div>
+      <div className="rounded-lg bg-navy-50 p-3 text-sm dark:bg-navy-950/60 space-y-2">
+        <div className="flex flex-wrap items-center justify-between">
+          <div>Monthly payment = <strong><Money v={payment} /></strong></div>
+          <SaveButton label="loanPayment" value={payment} />
+        </div>
+        <div className="flex flex-wrap items-center justify-between border-t border-navy-200 dark:border-navy-800 pt-2">
+          <div>Total paid = <strong><Money v={total} /></strong></div>
+          <SaveButton label="loanTotal" value={total} />
+        </div>
+        <div className="flex flex-wrap items-center justify-between">
+          <div>Total interest = <strong><Money v={interest} /></strong></div>
+          <SaveButton label="loanInterest" value={interest} />
+        </div>
       </div>
       <details className="text-sm">
         <summary className="cursor-pointer text-navy-600 dark:text-navy-300">First 12 payments (amortisation preview)</summary>
@@ -171,8 +208,11 @@ function Margin() {
         <label className="space-y-1"><span className="label">Cost</span><input type="number" className="input" value={cost} onChange={(e) => setCost(Number(e.target.value))} /></label>
         <label className="space-y-1"><span className="label">Revenue</span><input type="number" className="input" value={revenue} onChange={(e) => setRevenue(Number(e.target.value))} /></label>
       </div>
-      <div className="rounded-lg bg-navy-50 p-3 text-sm dark:bg-navy-950/60 space-y-1">
-        <div>Profit = Revenue − Cost = <strong><Money v={profit} /></strong></div>
+      <div className="rounded-lg bg-navy-50 p-3 text-sm dark:bg-navy-950/60 space-y-2">
+        <div className="flex flex-wrap items-center justify-between">
+          <div>Profit = Revenue − Cost = <strong><Money v={profit} /></strong></div>
+          <SaveButton label="profit" value={profit} />
+        </div>
         <div>Profit margin = Profit / Revenue × 100 = <strong>{Number.isFinite(margin) ? margin.toFixed(2) + '%' : '—'}</strong></div>
         <div>Markup = Profit / Cost × 100 = <strong>{Number.isFinite(markup) ? markup.toFixed(2) + '%' : '—'}</strong></div>
       </div>
@@ -199,11 +239,14 @@ function VAT() {
           </select>
         </label>
       </div>
-      <div className="rounded-lg bg-navy-50 p-3 text-sm dark:bg-navy-950/60 space-y-1">
+      <div className="rounded-lg bg-navy-50 p-3 text-sm dark:bg-navy-950/60 space-y-2">
         <div>Net = <strong><Money v={net} /></strong></div>
         <div>VAT = <strong><Money v={vat} /></strong></div>
-        <div>Gross = <strong><Money v={gross} /></strong></div>
+        <div className="flex flex-wrap items-center justify-between border-t border-navy-200 dark:border-navy-800 pt-2">
+          <div>Gross = <strong><Money v={gross} /></strong></div>
+          <SaveButton label="vatGross" value={gross} />
+        </div>
       </div>
     </div>
   );
-}
+} 

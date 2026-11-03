@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
-import { Plus, Trash2, Eye, EyeOff, ZoomIn, ZoomOut, RotateCcw } from 'lucide-react';
+import { Plus, Trash2, Eye, EyeOff, ZoomIn, ZoomOut, RotateCcw, Database } from 'lucide-react';
 import { evaluateExpression } from '@/lib/math/evaluate';
+import { useWorkspace } from '@/hooks/useWorkspace';
 
 interface Eq {
   id: string;
@@ -15,7 +16,6 @@ function uid() {
   return Math.random().toString(36).slice(2, 9);
 }
 
-/** Safely evaluate y(x) — returns null if the result isn't a finite number. */
 function evalAt(expr: string, x: number): number | null {
   if (!expr.trim()) return null;
   const r = evaluateExpression(expr, { scope: { x } });
@@ -37,6 +37,7 @@ export function Graphing() {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const [size, setSize] = useState({ w: 0, h: 0 });
 
+  const { variables } = useWorkspace();
   const [equations, setEquations] = useState<Eq[]>([
     { id: uid(), expr: 'x^2 - 3', color: COLORS[0], visible: true },
   ]);
@@ -47,7 +48,7 @@ export function Graphing() {
   const [parseError, setParseError] = useState<string | null>(null);
   const [tableX, setTableX] = useState(0);
 
-  // ---- 1. Track container size with ResizeObserver so canvas is never 0×0 ----
+  // Track container size
   useEffect(() => {
     const el = wrapRef.current;
     if (!el) return;
@@ -65,7 +66,7 @@ export function Graphing() {
     };
   }, []);
 
-  // ---- 2. Validate each equation and surface a useful message ----
+  // Validate syntax
   useEffect(() => {
     for (const eq of equations) {
       if (!eq.expr.trim()) continue;
@@ -78,7 +79,7 @@ export function Graphing() {
     setParseError(null);
   }, [equations]);
 
-  // ---- 3. Draw whenever anything changes ----
+  // Draw Graph
   useEffect(() => {
     const canvas = canvasRef.current;
     if (!canvas || size.w === 0 || size.h === 0) return;
@@ -156,23 +157,20 @@ export function Graphing() {
       ctx.fillText(y.toFixed(yDec), xAxisCol + 4, yToPx(y) - 2);
     }
 
-    // Plot each visible equation
+    // Plot each equation
     const samples = Math.max(400, Math.floor(W));
     for (const eq of equations) {
       if (!eq.visible || !eq.expr.trim()) continue;
-
       ctx.strokeStyle = eq.color;
       ctx.lineWidth = 2;
       ctx.lineJoin = 'round';
       ctx.beginPath();
-
       let penDown = false;
       let prevPy: number | null = null;
 
       for (let i = 0; i <= samples; i++) {
         const x = xMin + ((xMax - xMin) * i) / samples;
         const y = evalAt(eq.expr, x);
-
         if (y === null) {
           penDown = false;
           prevPy = null;
@@ -181,14 +179,11 @@ export function Graphing() {
 
         const px = xToPx(x);
         const py = yToPx(y);
-
         if (!Number.isFinite(px) || !Number.isFinite(py)) {
           penDown = false;
           prevPy = null;
           continue;
         }
-
-        // Detect vertical asymptotes: a huge jump in pixel space
         if (prevPy !== null && Math.abs(py - prevPy) > H * 3) {
           penDown = false;
         }
@@ -205,15 +200,24 @@ export function Graphing() {
     }
   }, [equations, xMin, xMax, yMin, yMax, size]);
 
-  const addEq = () => {
+  const addEq = () =>
     setEquations((prev) => [
       ...prev,
       { id: uid(), expr: '', color: COLORS[prev.length % COLORS.length], visible: true },
     ]);
-  };
   const update = (id: string, patch: Partial<Eq>) =>
     setEquations((prev) => prev.map((e) => (e.id === id ? { ...e, ...patch } : e)));
   const remove = (id: string) => setEquations((prev) => prev.filter((e) => e.id !== id));
+
+  const importFromWorkspace = (key: string) => {
+    const val = variables[key];
+    if (val !== undefined) {
+      setEquations((prev) => [
+        ...prev,
+        { id: uid(), expr: String(val), color: COLORS[prev.length % COLORS.length], visible: true },
+      ]);
+    }
+  };
 
   const zoom = (factor: number) => {
     const cx = (xMin + xMax) / 2;
@@ -248,12 +252,14 @@ export function Graphing() {
     return rows;
   }, [equations, tableX]);
 
+  const workspaceKeys = Object.keys(variables);
+
   return (
     <div className="mx-auto max-w-5xl space-y-4">
       <header className="space-y-1">
         <h1 className="text-2xl font-semibold">Graphing calculator</h1>
         <p className="text-sm text-navy-500 dark:text-navy-400">
-          Plot multiple equations of <span className="font-mono">x</span> on one canvas.
+          Plot multiple equations of x on one canvas.
         </p>
       </header>
 
@@ -263,6 +269,27 @@ export function Graphing() {
             <div className="text-xs font-semibold uppercase tracking-wider text-navy-400">
               Equations
             </div>
+
+            {/* Workspace Import */}
+            {workspaceKeys.length > 0 && (
+              <div className="mb-2 rounded-lg border border-violet-200 bg-violet-50 p-2 dark:border-violet-900/50 dark:bg-violet-950/20">
+                <div className="text-[10px] font-semibold text-violet-700 dark:text-violet-300 mb-1 flex items-center gap-1">
+                  <Database className="h-3 w-3" /> Import from Workspace
+                </div>
+                <div className="flex flex-wrap gap-1">
+                  {workspaceKeys.map((k) => (
+                    <button
+                      key={k}
+                      onClick={() => importFromWorkspace(k)}
+                      className="rounded bg-white px-2 py-0.5 text-xs font-mono shadow-sm border border-violet-100 hover:bg-violet-100 dark:bg-navy-800 dark:border-navy-700"
+                    >
+                      {k} ({variables[k]})
+                    </button>
+                  ))}
+                </div>
+              </div>
+            )}
+
             {equations.map((eq) => (
               <div key={eq.id} className="flex items-center gap-1.5">
                 <span
@@ -307,7 +334,9 @@ export function Graphing() {
           </div>
 
           <div className="card p-3 space-y-2">
-            <div className="text-xs font-semibold uppercase tracking-wider text-navy-400">Range</div>
+            <div className="text-xs font-semibold uppercase tracking-wider text-navy-400">
+              Range
+            </div>
             <div className="grid grid-cols-2 gap-2 text-xs">
               <label className="space-y-1">
                 <span className="label">x min</span>
@@ -388,17 +417,11 @@ export function Graphing() {
                 ))}
               </tbody>
             </table>
-            <p className="mt-2 text-[10px] text-navy-400">
-              Uses the first visible equation.
-            </p>
+            <p className="mt-2 text-[10px] text-navy-400">Uses the first visible equation.</p>
           </div>
         </div>
 
-        <div
-          ref={wrapRef}
-          className="card overflow-hidden"
-          style={{ height: 480 }}
-        >
+        <div ref={wrapRef} className="card overflow-hidden" style={{ height: 480 }}>
           <canvas
             ref={canvasRef}
             className="block h-full w-full"

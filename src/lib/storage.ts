@@ -4,6 +4,7 @@ const HISTORY_KEY = 'calcnova:history:v1';
 const NOTEBOOK_KEY = 'calcnova:notebook:v1';
 const SETTINGS_KEY = 'calcnova:settings:v1';
 const RECENT_KEY = 'calcnova:recent:v1';
+const WORKSPACE_KEY = 'calcnova:workspace:v1';
 
 function safeGet<T>(key: string, fallback: T, validate: (x: unknown) => x is T): T {
   if (typeof localStorage === 'undefined') return fallback;
@@ -56,6 +57,11 @@ const isSettings = (x: unknown): x is Settings =>
   ['deg', 'rad'].includes((x as Settings).angleMode) &&
   typeof (x as Settings).precision === 'number';
 
+const isWorkspace = (x: unknown): x is Record<string, number> => {
+  if (!x || typeof x !== 'object') return false;
+  return Object.values(x).every((val) => typeof val === 'number' && Number.isFinite(val));
+};
+
 const DEFAULT_SETTINGS: Settings = {
   theme: 'system',
   angleMode: 'deg',
@@ -75,6 +81,9 @@ export const storage = {
 
   loadRecent: () => safeGet<string[]>(RECENT_KEY, [], (x): x is string[] => Array.isArray(x)),
   saveRecent: (r: string[]) => safeSet(RECENT_KEY, r),
+
+  loadWorkspace: () => safeGet<Record<string, number>>(WORKSPACE_KEY, {}, isWorkspace),
+  saveWorkspace: (w: Record<string, number>) => safeSet(WORKSPACE_KEY, w),
 };
 
 export { DEFAULT_SETTINGS };
